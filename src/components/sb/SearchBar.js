@@ -1,17 +1,10 @@
-import { useState } from "react";
-
 export default function SearchBar({ blok }) {
-  const [query, setQuery] = useState("");
-
   return (
-    <section className="search-bar">
+    <section className="mx-auto max-w-6xl px-4 py-4">
       <input
-        type="text"
-        placeholder={blok.placeholder || "Sök produkter..."}
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        className="w-full h-10 rounded border px-3 text-sm"
+        placeholder={blok.placeholder || "Search"}
       />
-      <button>Sök</button>
     </section>
   );
 }
