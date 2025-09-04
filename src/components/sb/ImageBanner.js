@@ -13,7 +13,6 @@ Hämta länkens URL från Storyblok (om den finns), annars undefined
 */
   const href = blok.link?.cached_url ? `/${blok.link.cached_url}` : undefined;
   return (
-
 /*
 Sektion som centrerar innehållet och sätter maxbredd
 */
