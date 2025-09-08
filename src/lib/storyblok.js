@@ -1,5 +1,7 @@
 
 import { storyblokInit, apiPlugin } from "@storyblok/react/rsc";
+
+
 import Page from "@/components/sb/Page";
 import Teaser from "@/components/sb/Teaser";
 import Feature from "@/components/sb/Feature";
@@ -34,7 +36,7 @@ export const components = {
   topStrip: TopStrip,
 };
 
-// Initiera Storyblok en gångg
+// Initiera Storyblok en gång
 export const getStoryblokApi = storyblokInit({
 	accessToken: process.env.STORYBLOK_DELIVERY_API_ACCESS_TOKEN || process.env.NEXT_PUBLIC_STORYBLOK_DELIVERY_API_ACCESS_TOKEN,
 	use: [apiPlugin],

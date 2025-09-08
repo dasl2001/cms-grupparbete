@@ -1,3 +1,4 @@
+import ServerComponent from "@/components/sb/ServerComponent";
 import "./globals.css";
 import { getStoryblokApi } from "@/lib/storyblok";
 
@@ -11,15 +12,18 @@ export default async function RootLayout({ children }) {
     cfg = null;
   }
 
-  const renderMaybe = (blok) => (blok ? <StoryblokComponent blok={blok} /> : null);
+  const topStrip = cfg?.body?.find(b => b.component === "topStrip");
+  const header = cfg?.body?.find(b => b.component === "header");
+  const footer = cfg?.body?.find(b => b.component === "footer");
 
+  const renderMaybe = (blok) => (blok ? <ServerComponent blok={blok} /> : null);
   return (
     <html lang="sv">
       <body className="bg-white text-black">
-        {renderMaybe(cfg?.topStrip)}
-        {renderMaybe(cfg?.header)}
+        {renderMaybe(topStrip)}
+        {renderMaybe(header)}
         <main>{children}</main>
-        {renderMaybe(cfg?.footer)}
+        {renderMaybe(footer)}
       </body>
     </html>
   );
