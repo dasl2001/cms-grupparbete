@@ -1,3 +1,4 @@
+// ProductList.js (din fil)
 import { getStoryblokApi } from "@storyblok/react/rsc";
 import ProductCard from "./ProductCard";
 
@@ -8,8 +9,8 @@ export default async function ProductList({ blok }) {
 
   const { data } = await sb.get("cdn/stories", {
     starts_with: `${folder}/`,
-    content_type: "productDetailPage",
-    version: "published",
+    content_type: "product",            // <-- ändrat hit
+    version: "published",               // byt till "draft" om du vill se opublicerat
     per_page: limit,
     sort_by: "published_at:desc",
   });

@@ -1,9 +1,11 @@
 export default function Header({ blok }) {
   const links = Array.isArray(blok.links) ? blok.links : [];
   return (
-    <header className="border-b bg-white">
-      <div className="mx-auto max-w-6xl h-14 px-4 flex items-center gap-6">
-        <a href="/" className="font-semibold">{blok.logo || "Ecommerce"}</a>
+    <header className="border-b bg-white flex justify-center">
+      <div className="w-[1400px] h-[60px] px-4 flex items-center gap-6">
+        <a href="/" className="font-semibold">
+          {blok.logo || "Ecommerce"}
+        </a>
         <nav className="flex gap-4 text-sm">
           {links.map((n) => (
             <a

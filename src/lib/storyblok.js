@@ -15,8 +15,12 @@ import ImageWithText from "@/components/sb/ImageWithText";
 import SearchBar from "@/components/sb/SearchBar";
 import ProductList from "@/components/sb/ProductList";
 import LatestProductsList from "@/components/sb/LatestProductsList";
-import ProductMenu from "@/components/sb/ProductMenu";
+import ProductGrid from "@/components/sb/ProductGrid";
 import TopStrip from "@/components/sb/TopStrip";
+import AddToCartButton from "@/components/sb/AddToCartButton";
+import ShopMenu from "@/components/sb/ShopMenu";
+import ProductsGrid from "@/components/sb/ProductsGrid";
+
 
 export const components = {
   page: Page,
@@ -32,8 +36,11 @@ export const components = {
   searchBar: SearchBar,
   productList: ProductList,
   latestProductsList: LatestProductsList,
-  productMenu: ProductMenu,
+  productGrid: ProductGrid,
   topStrip: TopStrip,
+  addToCartButton: AddToCartButton,
+  ShopMenu: ShopMenu,
+  ProductsGrid: ProductsGrid,
 };
 
 // Initiera Storyblok en gång
@@ -45,3 +52,8 @@ export const getStoryblokApi = storyblokInit({
 	},
     components
 });
+
+
+export function getStoryblokVersion() {
+  return process.env.NODE_ENV !== "production" ? "draft" : "published"
+}
