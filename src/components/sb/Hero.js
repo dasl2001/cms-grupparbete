@@ -1,25 +1,43 @@
+/*
+Hero-sektionen på startsidan (och ev. andra sidor)
+Visar titel, text, knappar och bilder.
+Redaktören kan nu även ändra bakgrundsfärg via fältet "bg_color" i Storyblok.
+*/
+
 import Image from "next/image";
 import Link from "next/link";
 import { renderRichText } from "@storyblok/react/rsc";
 
+/*
+Hjälpfunktion som fixar länkar från Storyblok
+→ Om en bildlänk börjar med "//" läggs https: till i början.
+*/
 const norm = (u) => (u ? (u.startsWith("//") ? `https:${u}` : u) : null);
 
 export default function Hero({ blok, story }) {
+  /*
+  Intern komponent för att rendera textfältet.
+  Kan vara:
+    - Rich Text (Storyblok-format) → renderas med renderRichText
+    - Vanlig sträng → visas i ett <p>
+  */
   const TextBlock = () => {
     const t = blok?.text;
     if (!t) return null;
 
     if (typeof t === "object" && Array.isArray(t.content)) {
+      // Rich Text
       return (
-        <div className="mt-2 text-sm text-neutral-600 max-w-3xl mx-auto relative z-10">
+        <div className="mt-2 text-sm text-neutral-600 max-w-3xl mx-auto relative z-20">
           {renderRichText(t)}
         </div>
       );
     }
 
     if (typeof t === "string") {
+      // Vanlig textsträng
       return (
-        <p className="mt-2 text-sm text-neutral-600 max-w-3xl mx-auto relative z-10">
+        <p className="mt-2 text-sm text-neutral-600 max-w-3xl mx-auto relative z-20">
           {t}
         </p>
       );
@@ -27,24 +45,46 @@ export default function Hero({ blok, story }) {
     return null;
   };
 
+  /*
+  Hjälp: avgör om vi är på "about"-sidan
+  → då döljs "Shop all"-knappen.
+  */
   const isAbout = story?.full_slug === "about";
 
-  const mainImg = blok?.image?.filename ? norm(blok.image.filename) : null;   // 1114x521
-  const extraImg = blok?.image1?.filename ? norm(blok.image1.filename) : null; // 1400x316
+  /*
+  Hämta bilderna från Storyblok (om de finns).
+  - mainImg = huvudbild (1114x521)
+  - extraImg = extrabild (1400x316)
+  */
+  const mainImg = blok?.image?.filename ? norm(blok.image.filename) : null;
+  const extraImg = blok?.image1?.filename ? norm(blok.image1.filename) : null;
+
+  /*
+  NYTT: Dynamisk bakgrundsfärg.
+  Redaktören kan ange en färg i fältet "bg_color" i Storyblok.
+  Om inget är ifyllt används vit (#ffffff).
+  */
+  const bg =
+    typeof blok?.bg_color === "string" && blok.bg_color.trim()
+      ? blok.bg_color
+      : "#ffffff";
 
   return (
-    <section className="bg-white border-b relative">
-      <div className="mx-auto max-w-6xl px-4 py-12 text-center relative z-10">
-        <header>
-          <h1 className="text-3xl font-semibold relative z-10">
-            {blok?.title || "Better football jerseys for the planet"}
-          </h1>
-          <TextBlock />
-        </header>
+    // Bakgrundsfärgen styrs nu av redaktören via bg_color
+    <section
+      className="relative border-b"
+      style={{ minHeight: 1300, backgroundColor: bg }}
+    >
+      {/* Titel, text och ev. knapp */}
+      <div className="mx-auto max-w-6xl px-4 pt-12 text-center relative z-30">
+        <h1 className="text-3xl font-semibold">
+          {blok?.title || "Better football jerseys for the planet"}
+        </h1>
+        <TextBlock />
 
-        {/* Knappen – visas ej på About */}
+        {/* "Shop all"-knappen visas bara om vi INTE är på /about */}
         {!isAbout && (
-          <div className="mt-6 relative z-20">
+          <div className="mt-6">
             <Link
               href="/products"
               className="inline-flex rounded-md border px-6 py-3 text-sm bg-white hover:bg-neutral-50 shadow-sm"
@@ -55,34 +95,46 @@ export default function Hero({ blok, story }) {
         )}
       </div>
 
-      {/* Huvudbild 1114 × 521 */}
+      {/* Huvudbilden (1114x521), centrerad */}
       {mainImg && (
-        <div className="relative mx-auto max-w-6xl px-4 pb-6 flex justify-center z-0">
-          <div className="relative w-full aspect-[1114/521] lg:w-[1114px] lg:h-[521px] overflow-hidden rounded-xl bg-gray-100">
-            <Image
-              src={mainImg}
-              alt={blok.image?.alt || ""}
-              fill
-              className="object-cover object-center"
-              priority
-              sizes="(max-width:1024px) 100vw, 1114px"
-            />
-          </div>
+        <div
+          className="absolute overflow-hidden rounded-xl bg-gray-100 z-10 opacity-100"
+          style={{
+            top: 381, // 381px ner från toppen
+            left: "50%", // mitten av sidan
+            transform: "translateX(-50%)", // centrera exakt
+            width: 1114,
+            height: 521,
+          }}
+        >
+          <Image
+            src={mainImg}
+            alt={blok.image?.alt || ""}
+            fill
+            className="object-cover object-center"
+            sizes="1114px"
+            priority
+          />
         </div>
       )}
 
-      {/* Extra bild 1400 × 316 – visas när fältet image1 är ifyllt */}
+      {/* Extra bild (1400x316), centrerad längre ner */}
       {extraImg && (
-        <div className="relative mx-auto max-w-6xl px-4 pb-12 flex justify-center z-0">
-          <div className="relative w-full aspect-[1400/316] lg:w-[1400px] lg:h-[316px] overflow-hidden rounded-xl bg-gray-100">
-            <Image
-              src={extraImg}
-              alt={blok.image1?.alt || ""}
-              fill
-              className="object-cover object-center"
-              sizes="(max-width:1024px) 100vw, 1400px"
-            />
-          </div>
+        <div
+          className="absolute left-1/2 -translate-x-1/2 overflow-hidden rounded-xl bg-gray-100 z-0 opacity-100"
+          style={{
+            top: 972,
+            width: 1400,
+            height: 316,
+          }}
+        >
+          <Image
+            src={extraImg}
+            alt={blok.image1?.alt || ""}
+            fill
+            className="object-cover object-center"
+            sizes="1400px"
+          />
         </div>
       )}
     </section>

@@ -1,98 +1,170 @@
+/*
+Hämtar hjälpare för Storyblok: API-instans + vilken version ("draft"/"published") vi ska läsa.
+Next.js Image för optimerade bilder
+notFound() visar Next.js 404-sida
+Köp-knapp
+*/
 import { getStoryblokApi, getStoryblokVersion } from "@/lib/storyblok";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import AddToCartButton from "@/components/sb/AddToCartButton";
 
-// Helper: Storyblok Richtext -> plain text (ingen <p>)
+/*
+Liten hjälpare: normaliserar Storybloks "//a.storyblok.com/..." till giltig "https://..."
+*/
+const norm = (u) => (u ? (u.startsWith("//") ? `https:${u}` : u) : null);
+
+
+/*
+En enkel RichText→plain-text transformer (räcker för beskrivningar).
+*/
 function richTextToPlain(richtext) {
-  if (!richtext || typeof richtext !== "object" || !Array.isArray(richtext.content)) {
-    return "";
-  }
+  if (!richtext || typeof richtext !== "object" || !Array.isArray(richtext.content)) return "";
   return richtext.content
     .map((block) =>
-      Array.isArray(block.content)
-        ? block.content.map((inner) => inner.text || "").join("")
-        : ""
+      Array.isArray(block.content) ? block.content.map((inner) => inner.text || "").join("") : ""
     )
     .join("\n")
     .trim();
 }
 
+/*
+Viktigt i Next 15: props som `params` är ASYNKRONA i serverkomponenter.
+Eftersom vi använder catch-all route ([...slug]) får vi en ARRAY och behöver join:a den.
+Next 15: params är async + [...slug] => array
+*/
 export default async function ProductPage({ params }) {
-  const { slug } = await params; // Next 15
+
+/*
+Vänta in params och bygg en slug-sträng (t.ex. ["real-madrid-away-25-26"] -> "real-madrid-away-25-26")
+*/
+  const { slug } = await params;
+  const slugPath = Array.isArray(slug) ? slug.join("/") : slug;
+
+/*
+Hämta Storyblok-API-instansen.
+*/
   const sb = getStoryblokApi();
 
-  const { data } = await sb.get(`cdn/stories/products/${slug}`, {
-    version: getStoryblokVersion, 
-  });
+/*
+Försök hämta en specifik produktstory under "products/<slug>".
+*/
+  let data;
+  try {
+    ({ data } = await sb.get(`cdn/stories/products/${slugPath}`, {
+      version: getStoryblokVersion(),
+    }));
+  } catch {
 
+/*
+Om Storyblok svarar 401/404 etc. → visa 404-sidan.
+*/
+    return notFound();
+  }
+
+/*
+Storyn innehåller själva produkten.
+*/
   const story = data?.story;
   if (!story) return notFound();
 
+/*
+Content är fältobjektet du definierar i Storyblok schemat.
+*/
   const c = story.content || {};
-  const norm = (u) => (u ? (u.startsWith("//") ? `https:${u}` : u) : null);
 
-  // Bild
+/*
+Välj bild: först "image", annars första posten i "images"
+*/
   const filename =
     c.image?.filename ||
     (Array.isArray(c.images) && c.images[0]?.filename) ||
     null;
   const img = filename ? norm(filename) : null;
 
-  // Beskrivning (plain text)
+/*
+Gör om Rich Text-beskrivningen till ren text (om fältet finns).
+*/
   const descPlain = c.description ? richTextToPlain(c.description) : "";
 
-  // Färger (valfritt fält)
+/*
+Stöd för både single-fält (color) och multioption-fält (colors)
+*/
   const rawColors = Array.isArray(c.colors) ? c.colors : c.color ? [c.color] : [];
+
+/*
+Normalisera till { label, value }.
+*/
   const colors = rawColors.map((item) =>
     typeof item === "string"
       ? { label: item, value: item }
       : { label: item.name || item.value || "Color", value: item.value || item.name }
   );
+
+/*
+Hjälp: avgör om värdet kan användas direkt som CSS-färg (hex/namn)
+*/
   const isColorValue = (v) =>
     typeof v === "string" &&
     (v.startsWith("#") ||
-      [
-        "black","white","red","blue","green","yellow",
-        "orange","purple","navy","brown","gray","grey",
-      ].includes(v.toLowerCase()));
+      ["black","white","red","blue","green","yellow","orange","purple","navy","brown","gray","grey"]
+        .includes(v.toLowerCase()));
 
-  // Storlekar som knappar
+/* 
+Stöd för både single-fält (size) och multioption-fält (sizes) 
+Om inget fält finns i Storyblok, fall back till standardlista
+*/       
   const sizes = Array.isArray(c.sizes) && c.sizes.length > 0 ? c.sizes : ["XS","S","M","L","XL"];
 
   return (
-    <div
-      className="mx-auto max-w-6xl grid gap-10 px-4 py-12
-                 md:grid-cols-[554px_1fr]"  // lås första kolumnen till 554px
-    >
-      {/* Bild */}
-      <div className="relative w-full h-[554px] overflow-hidden rounded-xl bg-gray-100 mx-auto">
+/*
+Vi ger min-höjd så att absolut placerad bild får utrymme
+*/
+    <main className="relative mx-auto max-w-6xl px-4 pb-24" style={{ minHeight: 900 }}>
+{/*
+width: 554px; height: 554px; top: 148px; left: 110px; angle: 0; opacity: 1
+*/}
+      <div
+        className="absolute overflow-hidden rounded-xl bg-gray-100"
+        style={{ top: 148, left: 110, width: 554, height: 554, opacity: 1, transform: "rotate(0deg)" }}
+      >
         {img && (
           <Image
             src={img}
             alt={c.image?.alt || c.name || story.name}
-            fill
+            fill //fyller container (som vi låst till 554x554)
             className="object-cover object-center"
-            priority
-            sizes="(min-width:768px) 554px, 100vw"
+            sizes="554px" //hjälper Next välja rätt bildstorlek
+            priority  //viktigt för "above the fold" bilder
           />
         )}
       </div>
 
-      {/* Info */}
-      <div>
+{/* 
+INFO-KOLUMN till höger om bilden.
+margin-left = 110 (left) + 554 (bildbredd) + 96 (luft) = 760px.
+padding-top linjerar topp med bilden. 
+*/}
+      <div className="relative" style={{ marginLeft: 760, paddingTop: 148 }}>
+
+{/* 
+Produktnamn + pris 
+*/}        
         <h1 className="text-2xl font-semibold">{c.name || story.name}</h1>
         {c.price && <p className="mt-2 text-lg">{c.price} kr</p>}
 
-        {/* Colors (om finns) */}
+{/* 
+Färgalternativ (swatches + etikett). 
+Visas bara om vi har färger. 
+*/}
         {colors.length > 0 && (
           <div className="mt-6">
             <div className="text-sm font-medium">Colors</div>
-            <div className="mt-2 flex flex-wrap gap-2">
+            <div className="mt-2 flex flex-wrap gap-3">
               {colors.map((col, i) => (
                 <div key={`${col.label}-${i}`} className="flex items-center gap-2">
                   <span
-                    className="inline-block h-5 w-5 rounded-full border"
+                    className="inline-block h-6 w-6 rounded-full border"
                     style={isColorValue(col.value) ? { background: col.value } : {}}
                     aria-label={col.label}
                     title={col.label}
@@ -104,25 +176,26 @@ export default async function ProductPage({ params }) {
           </div>
         )}
 
-        {/* Beskrivning */}
-        {descPlain && (
-          <div className="mt-6 text-sm text-neutral-700 whitespace-pre-line">
-            {descPlain}
-          </div>
-        )}
+{/* 
+Beskrivning som plain text (radbrytningar bevaras) 
+*/}
+        {descPlain && <div className="mt-6 text-sm text-neutral-700 whitespace-pre-line">{descPlain}</div>}
 
-        {/* Size-knappar */}
+{/* 
+Storleksknappar (dummy UI – här väljs ingen state än) 
+m = margin
+t = top
+6 = Tailwind spacing-värdet
+Enligt Tailwinds standard-skala betyder 6 = 1.5rem = 24px.
+mt-6 = lägg till 24px marginal ovanför elementet.
+*/}
         <div className="mt-6">
           <div className="text-sm font-medium">Size</div>
           <div className="mt-2 flex flex-wrap gap-2">
             {sizes.map((s, idx) => {
-              const label = typeof s === "string" ? s : s.name || s.value || `Size ${idx+1}`;
+              const label = typeof s === "string" ? s : s.name || s.value || `Size ${idx + 1}`;
               return (
-                <button
-                  key={`${label}-${idx}`}
-                  type="button"
-                  className="rounded-md border px-3 py-1 text-sm hover:bg-neutral-50"
-                >
+                <button key={`${label}-${idx}`} type="button" className="rounded-md border px-3 py-1 text-sm hover:bg-neutral-50">
                   {label}
                 </button>
               );
@@ -130,30 +203,16 @@ export default async function ProductPage({ params }) {
           </div>
         </div>
 
-        {/* Size & Fit Guide + Model info */}
-        <div className="mt-8 border-t pt-6">
-          <h3 className="text-sm font-medium">Size & Fit Guide</h3>
-          <p className="mt-4 text-sm text-neutral-600">
-            Model information not available.
-          </p>
+{/* 
+Köpknapp – skickar med basinfo om produkten 
+mt-8 = lägg till 32px marginal ovanför elementet.
+*/}
+        <div className="mt-8">
+          <AddToCartButton
+            product={{ id: story.id, slug: story.full_slug, name: c.name || story.name, price: c.price }}
+          />
         </div>
-
-        {/* Add to cart */}
-        <AddToCartButton
-          product={{
-            id: story.id,
-            slug: story.full_slug,
-            name: c.name || story.name,
-            price: c.price,
-          }}
-        />
       </div>
-    </div>
+    </main>
   );
 }
-
-
-
-
-
-
